@@ -88,41 +88,41 @@
     </div>
 
     <div id="inputname" class="dialog" role="dialog" data-backdrop="static">
-        <div class="container row">
-            <div class="col fix-center">
-                <div class="card small-inputname">
-                    <div class="card-header">
-                        Nhập Tên
+        <div class="fix-center">
+            <div class="card small-inputname">
+                <div class="card-header">
+                    Nhập Tên
+                </div>
+                <div class="card-body">
+                    <div class="input-group">
+                        <label for="myname">Tên</label>
+                        <input class="form-control" type="text" id="myname" placeholder="Nhập tên">
                     </div>
-                    <div class="card-body">
-                        <div class="input-group">
-                            <label for="myname">Tên</label>
-                            <input class="form-control" type="text" id="myname" placeholder="Nhập tên">
-                        </div>
-                        <button class="btn btn-primary ok-btn" type="button" onclick="okInputName()" >OK</button>
-                    </div>
+                    <button class="btn btn-primary ok-btn" type="button" onclick="okInputName()" >OK</button>
                 </div>
             </div>
-            
         </div>
     </div>
 
-    <div id="video" class="dialog" role="dialog" data-backdrop="static">
-            <div class="fix-center">
-                <div class="card small-video">
-                    <div class="card-header d-flex justify-content-between">
-                        CALL
-                        <div class="icons grey-text">
-                            <a id="closeVideo"><i class="fa fa-times mr-2"></i></a>
+    <div id="video" class="container dialog" role="dialog" data-backdrop="static">
+            <div class="container">
+                <div class="row">
+                    <div class="card small-video fix-center">
+                        <div class="card-header d-flex justify-content-between">
+                            CALL
+                            <div class="icons grey-text">
+                                <a id="closeVideo"><i class="fa fa-times mr-2"></i></a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+
+                                <video id="remoteStream" class="videoremote" controls></video>
+                                <video id="localStream" class="videolocal" controls></video>
+                                
                         </div>
                     </div>
-                    <div class="card-body">
-
-                            <video id="remoteStream" class="videoremote" controls></video>
-                            <video id="localStream" class="videolocal" controls></video>
-                              
-                    </div>
                 </div>
+                
             </div>
         </div>
     
