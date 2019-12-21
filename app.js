@@ -3,6 +3,9 @@ var myid = '';
 var myfriendname = '';
 var myfriendid = '';
 
+var showmsgchat = {};
+var pc = {};
+var readyState = {};
 
   // TODO: Replace the following with your app's Firebase project configuration
 var firebaseConfig = {
@@ -21,102 +24,24 @@ firebase.initializeApp(firebaseConfig);
 
 var database = firebase.database();
 
-
-
 const configuration = {iceServers: [{urls: 'stun:stun.l.google.com:19302'}]};
-const pc = new RTCPeerConnection(configuration);
-var dc;
+
 const remoteView = document.getElementById('remoteStream');
-// const config = {audio: true, video: true};
 const config = {audio: true, video: true};
+// const configVideoCall = {audio: true, video: true};
+// const configAudioCall = {audio: true, video: false};
 const localView = document.getElementById('localStream');
 localView.muted = true;
 localView.volume = 0;
 var type = 'msg';
 navigator.mediaDevices.getUserMedia = navigator.mediaDevices.getUserMedia || navigator.mediaDevices.webkitGetUserMedia || navigator.mediaDevices.mozGetUserMedia;
 
-
-// send any ice candidates to the other peer
-pc.onicecandidate = async ({candidate}) => {
-    console.log(candidate);
-    // signaling.send({candidate})
-    if(candidate){
-        let candi = JSON.stringify(candidate)
-        await database.ref().child('Videos/' + myfriendid + '/candidate').push({candidate:candi,sender:myid});
-    }
-};
-
-// let the "negotiationneeded" event trigger offer generation
-pc.onnegotiationneeded = async () => {
-    try {
-      await pc.setLocalDescription(await pc.createOffer());
-      console.log('onnegotiationneeded**********************offer');
-      console.log(pc.localDescription);
-      // send the offer to the other peer
-    //   signaling.send({desc: pc.localDescription});
-    let desc = JSON.stringify(pc.localDescription);
-    await database.ref().child('Videos/' + myfriendid + '/desc').push({desc:desc,sender:myid,type:type});
-    } catch (err) {
-      console.error(err);
-    }
-};
-
-// once remote track media arrives, show it in remote video element
-pc.ontrack = (event) => {
-    // don't set srcObject again if it is already set.
-    if (remoteView.srcObject) return;
-    remoteView.srcObject = event.streams[0];
-    remoteView.play();
-};
-
-pc.ondatachannel = (event) => {
-  event.channel.onmessage = (e) => {
-    console.log('ondatachannel');
-    console.log(e.data);
-    $('#message').append(`<div class="d-flex justify-content-start">
-                            <div class="msg_cotainer">
-                                <span>${e.data}</span>
-                            </div>
-                          </div>`);
-    scrollToBottom();
-  };
-  event.channel.onopen = (e) => {
-    console.log('onopen');
-    console.log(e);
-    var state = event.channel.readyState;
-    if (state === "open") {
-      database.ref('Videos/'+ myfriendid + '/name').on('value', (value)=>{
-        myfriendname = value.val();
-        console.log(myfriendname);
-      });
-      $('#myForm').removeClass('chat-room');
-      $('.data').empty();
-      $('.data').append('<p class="name mb-0"><strong>' + myfriendname + '</strong></p>');
-      $('#closeButton').click(()=> {
-        $('#myForm').addClass('chat-room');
-      });
-      $('#btnsend').click(()=> {
-        sendMsg(event.channel);
-      });
-      $('#inputmessage').keyup((e)=> {
-        if (e.keyCode === 13) {
-          sendMsg(event.channel);   
-        }
-      });
-    } else {
-      $('#myForm').addClass('chat-room');
-      event.channel.close();
-      alert('connect false !');
-    }
-  };
-};
-
 // call start() to initiate
-async function start() {
+  async function start(id) {
     try {
         // get local stream, show it in self-view and add it to be sent
         await navigator.mediaDevices.getUserMedia(config).then((stream)=>{
-          stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+          stream.getTracks().forEach((track) => pc[id].addTrack(track, stream));
           localView.srcObject = stream;
           localView.play();
         });
@@ -125,14 +50,17 @@ async function start() {
     }
   }
 
-  async function configDescMessage(desc) {
+  async function configDescMessage(id, desc) {
     console.log(desc);
     try {
         if (desc) {
             console.log('connectionSetting********desc');
             // if we get an offer, we need to reply with an answer
             if (desc.type === 'offer') {
-                await pc.setRemoteDescription(new RTCSessionDescription(desc));
+                if (!readyState[id]) {
+                  createPeerConn(id);
+                }
+                await pc[id].setRemoteDescription(new RTCSessionDescription(desc));
                 if(type === 'call'){
                   console.log('navigator');
                   $('#video').addClass('show');
@@ -151,21 +79,21 @@ async function start() {
                     remoteView.srcObject = null;
                   });
                   await navigator.mediaDevices.getUserMedia(config).then((stream)=>{
-                  stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+                  stream.getTracks().forEach((track) => pc[id].addTrack(track, stream));
                   localView.srcObject = stream;
                   localView.play();
                   });
                 }
                 
-                await pc.setLocalDescription(await pc.createAnswer());
-                let descanser = JSON.stringify(pc.localDescription);
-                await database.ref().child('Videos/' + myfriendid + '/desc').push({desc: descanser, sender: myid, type:type});
+                await pc[id].setLocalDescription(await pc[id].createAnswer());
+                let descanser = JSON.stringify(pc[id].localDescription);
+                await database.ref().child('Videos/' + id + '/desc').push({desc: descanser, sender: myid, type:type});
                 
                 // signaling.send({desc: pc.localDescription});
                 console.log('offer****************************');
-                console.log(pc.localDescription);
+                console.log(pc[id].localDescription);
             } else if (desc.type === 'answer') {
-              await pc.setRemoteDescription(desc);
+              await pc[id].setRemoteDescription(desc);
               console.log('answer *****************************');
             } else {
               console.log('Unsupported SDP type.');
@@ -177,9 +105,9 @@ async function start() {
   }
 
 
-  async function configCandicate(candidate) {
+  async function configCandicate(id, candidate) {
     try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        await pc[id].addIceCandidate(new RTCIceCandidate(candidate));
     } catch (err) {
         console.error(err);
     }
@@ -192,7 +120,7 @@ async function start() {
                     type = obj.val().type;
                     console.log('login');
                     console.log(myfriendid);
-                    configDescMessage(JSON.parse(obj.val().desc));
+                    configDescMessage(myfriendid, JSON.parse(obj.val().desc));
             });
 
         });
@@ -201,7 +129,7 @@ async function start() {
             snapshot.forEach((obj)=>{
                 console.log(obj.val().sender);
                 myfriendid = obj.val().sender;
-                configCandicate(JSON.parse(obj.val().candidate));
+                configCandicate(myfriendid, JSON.parse(obj.val().candidate));
             });
         });
   }
@@ -224,72 +152,222 @@ async function start() {
     console.log(name);
     myfriendid = id;
     myfriendname = name;
-    type = 'msg';
-    database.ref('Videos/'+ myfriendid + '/desc').remove();
-    database.ref('Videos/'+ myfriendid + '/candidate').remove();
-    database.ref('Videos/'+ myid + '/desc').remove();
-    database.ref('Videos/'+ myid + '/candidate').remove();
+    if (!readyState[id]) {
+
+      createPeerConn(id)
     
-    let date = new Date();
-    console.log(myfriendid + date);
-    if(dc){
-      dc.close();
+      type = 'msg';
+      database.ref('Videos/'+ id + '/desc').remove();
+      database.ref('Videos/'+ id + '/candidate').remove();
+      database.ref('Videos/'+ myid + '/desc').remove();
+      database.ref('Videos/'+ myid + '/candidate').remove();
+      let dc = pc[id].createDataChannel(id);
+      console.log('***********createDataChannel');
+      dc.onmessage = function(e){
+        console.log('onmessage');
+        console.log(e.data);
+        showmsgHistory(id, e.data, false);
+      }
+      dc.onopen = function(event){
+          console.log('onopen');
+          console.log(event.data);
+          var state = dc.readyState;
+          if (state === "open") {
+            readyState[id] = state;
+
+            createWindowChat(dc, id);
+
+          } else {
+            dc.close();
+            alert('connect false !');
+          }
+      }
+
+      dc.onclose = (e) => {
+        console.log('close');
+      };
     }
-    dc = pc.createDataChannel(myfriendid + date);
-    dc.onmessage = function(e){
-      console.log('onmessage');
-      console.log(e.data);
-      $('#message').append(`<div class="d-flex justify-content-start">
-                              <div class="msg_cotainer">
-                                  <span>${e.data}</span>
-                              </div>
-                            </div>`);
-      scrollToBottom();
+  }
+
+  function sendMsg(channel, id, msg) {
+    if (channel.readyState === 'open'){
+      channel.send(msg);
+      showmsgHistory(id, msg, true);
+    } else {
+      alert('Connection False !');
     }
-    dc.onopen = function(event){
+    
+  }
+
+  function showmsgHistory(id, msg, type){
+    if (showmsgchat[id]) {
+      if (type) {
+        showmsgchat[id].append(`<div class="d-flex justify-content-end">
+                                  <div class="msg_cotainer_send">
+                                      <span>${msg}</span>
+                                  </div>
+                                </div>`);
+      } else {
+        showmsgchat[id].append(`<div class="d-flex justify-content-start">
+                                  <div class="msg_cotainer">
+                                      <span>${msg}</span>
+                                  </div>
+                                </div>`);
+      }
+      scrollToBottom(id);
+    }
+  }
+
+  function createPeerConn(id) {
+    pc[id] = new RTCPeerConnection(configuration);
+    // send any ice candidates to the other peer
+    pc[id].onicecandidate = async ({candidate}) => {
+      console.log(candidate);
+      // signaling.send({candidate})
+      if(candidate){
+          let candi = JSON.stringify(candidate)
+          await database.ref().child('Videos/' + id + '/candidate').push({candidate:candi,sender:myid});
+      }
+    };
+
+    // let the "negotiationneeded" event trigger offer generation
+    pc[id].onnegotiationneeded = async () => {
+      try {
+        await pc[id].setLocalDescription(await pc[id].createOffer());
+        console.log('onnegotiationneeded**********************offer');
+        console.log(pc[id].localDescription);
+        // send the offer to the other peer
+      //   signaling.send({desc: pc.localDescription});
+      let desc = JSON.stringify(pc[id].localDescription);
+      await database.ref().child('Videos/' + id + '/desc').push({desc:desc,sender:myid,type:type});
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    // once remote track media arrives, show it in remote video element
+    pc[id].ontrack = (event) => {
+      // don't set srcObject again if it is already set.
+      if (remoteView.srcObject) return;
+      remoteView.srcObject = event.streams[0];
+      remoteView.play();
+    };
+
+    pc[id].ondatachannel = (event) => {
+      event.channel.onmessage = (e) => {
+        console.log('ondatachannel');
+        console.log(e.data);
+        showmsgHistory(id, e.data, false);
+      };
+      event.channel.onopen = (e) => {
         console.log('onopen');
-        console.log(event.data);
-        var state = dc.readyState;
+        console.log(e);
+        var state = event.channel.readyState;
         if (state === "open") {
-          $('#myForm').removeClass('chat-room');
-          $('.data').empty();
-          $('.data').append('<p class="name mb-0"><strong>' + name + '</strong></p>');
-          $('#closeButton').click(()=> {
-            $('#myForm').addClass('chat-room');
+          readyState[id] = state;
+          database.ref('Videos/'+ id + '/name').on('value', (value)=>{
+            myfriendname = value.val();
+            console.log(myfriendname);
           });
-          $('#btnsend').click(()=> {
-            sendMsg(dc);
-          });
-          $('#inputmessage').keyup((event)=> {
-            if (event.keyCode === 13) {
-              sendMsg(dc);   
-            }
-          });
+
+          createWindowChat(event.channel, id);
+
         } else {
-          $('#myForm').addClass('chat-room');
-          dc.close();
+          event.channel.close();
           alert('connect false !');
         }
-    }
+      };
+
+      event.channel.onclose = (e) => {
+        console.log('close');
+      };
+
+    };
   }
 
-  function sendMsg(channel) {
-    console.log('btnsend');
-    let msg = $('#inputmessage').val();
-    console.log(msg);
-    channel.send(msg);
-    $('#inputmessage').val('');
-    $('#message').append(`<div class="d-flex justify-content-end">
-                            <div class="msg_cotainer_send">
-                                <span>${msg}</span>
-                            </div>
-                          </div>`);
-      scrollToBottom()
+  function createWindowChat(dc, id) {
+    var panel = $(
+      `<div class="card small-chat wide">
+        <div class="card-header white d-flex justify-content-between p-2" style="cursor: pointer;">
+          <div class="heading d-flex justify-content-start">
+            <div class="profile-photo">
+              <img src="" alt="avatar" class="avatar rounded-circle mr-2 ml-0">
+              <span class="state"></span>
+            </div>
+            <div class="data">
+              
+            </div>
+          </div>
+          <div class="icons-up">
+            
+          </div>
+        </div>
+        <div class="card-body my-custom-scrollbar">
+            
+        </div>
+        <div class="card-footer text-muted white pt-1 pb-2 px-3">
+            <div class="input-group">
+                
+            </div>
+            <div class="icons-down">
+                
+            </div>
+        </div>
+      </div>`);
+
+      var title = $('<p class="name mb-0"><strong></strong></p>').text(myfriendname);
+
+      var videocall = $('<a class="feature"><i class="fa fa-video mr-2"></i></a>');
+      var audiocall = $('<a class="feature"><i class="fa fa-phone mr-2"></i></a>');
+      var closemsg = $('<a id="closeButton"><i class="fa fa-times mr-2"></i></a>');
+
+      var msg = $('<input type="text" class="form-control" placeholder="Type a message...">');
+      var sendbtn = $(`<div class="input-group-append">
+      <span class="input-group-text"><i class="fa fa-paper-plane"></i></span>
+      </div>`)
+
+      $('.data', panel).append(title);
+      $('.icons-up', panel).append(videocall).append(audiocall).append(closemsg);
+
+      showmsgchat[id] = $('.card-body', panel);
+
+      $('.input-group', panel).append(msg).append(sendbtn);
+
+      $('#myForm > div').append(panel);
+
+      closemsg.click(()=>{
+        console.log('close');
+        panel.remove();
+        delete pc[id];
+        pc[id] = null;
+        delete readyState[id];
+        readyState[id] = null;
+      });
+
+      msg.keyup((event)=>{
+        if (event.keyCode === 13){
+          console.log('keyup');
+          let ms = msg.val();
+          msg.val('');
+          console.log(ms);
+          sendMsg(dc, id, ms);
+        }
+      });
+
+      sendbtn.click(()=>{
+        console.log('sendbtn');
+        let ms = msg.val();
+        msg.val('');
+        console.log(ms);
+        sendMsg(dc, id, ms);
+      });
+
+      videocall.click(()=>videoClick(id));
   }
 
-  function videoClick() {
-    database.ref('Videos/'+ myfriendid + '/desc').remove();
-    database.ref('Videos/'+ myfriendid + '/candidate').remove();
+  function videoClick(id) {
+    database.ref('Videos/'+ id + '/desc').remove();
+    database.ref('Videos/'+ id + '/candidate').remove();
     database.ref('Videos/'+ myid + '/desc').remove();
     database.ref('Videos/'+ myid + '/candidate').remove();
     $('#video').addClass('show');
@@ -308,7 +386,7 @@ async function start() {
       });
       remoteView.srcObject = null;
     });
-    start();
+    start(id);
   }
 
   function inputName() {
@@ -333,8 +411,7 @@ async function start() {
     
   }
 
-  function scrollToBottom() {
-    $('#message').scrollTop($('#message').prop('scrollHeight'));
+  function scrollToBottom(id) {
+    showmsgchat[id].scrollTop(showmsgchat[id].prop('scrollHeight'));
   }
-  
 

@@ -59,10 +59,10 @@
               <!-- Grid column -->
               <div class="col-md-6">
                   <div class="row mt-5">
-                      <p>My ID:&nbsp<h5 id="id">123</h5> </p>
+                      <p>My ID:&nbsp<h5 id="id"></h5> </p>
                   </div>
                   <div class="row">
-                      <p>My Name:&nbsp<h5 id="name">hoang</h5> </p>
+                      <p>My Name:&nbsp<h5 id="name"></h5> </p>
                   </div>
                   <div class="row">
                       <button type="button" onclick="inputName()">Nhập Tên</button>
@@ -126,9 +126,12 @@
             </div>
         </div>
     
-    <div class="container fix-bottom">
-        <div class="card chat-room small-chat wide" id="myForm">
-                <div class="card-header white d-flex justify-content-between p-2" id="toggle" style="cursor: pointer;">
+    <div class="container-fluid fix-bottom" id="myForm">
+        <div class="row float-right">
+            
+        </div>
+        <!-- <div class="card small-chat wide">
+                <div class="card-header white d-flex justify-content-between p-2" style="cursor: pointer;">
                   <div class="heading d-flex justify-content-start">
                     <div class="profile-photo">
                       <img src="" alt="avatar" class="avatar rounded-circle mr-2 ml-0">
@@ -140,7 +143,7 @@
                     </div>
                   </div>
                   <div class="icons grey-text">
-                    <a class="feature" onclick="videoClick()"><i class="fa fa-video mr-2"></i></a>
+                    <a class="feature"><i class="fa fa-video mr-2"></i></a>
                     <a class="feature"><i class="fa fa-phone mr-2"></i></a>
                     <a class="feature"><i class="fa fa-cog mr-2"></i></a>
                     <a id="closeButton"><i class="fa fa-times mr-2"></i></a>
@@ -165,30 +168,8 @@
                         <a><i class="fa fa-thumbs-up float-right"></i></a>
                     </div>
                 </div>
-        </div>
+        </div> -->
     </div>
-<!-- 
-
-    <label for="localStream"> Local Stream</label>
-    <br/>
-    <video id="localStream" width="300px" controls></video>
-    <br/>
-    <label for="remoteStream"> Remote Stream</label>
-    <br/>
-    <video id="remoteStream" width="300px" controls></video>
-    <br/>
-    <br/>
-    <label for="myname">Gõ tên bạn</label>
-    <input type="text" id="myname" onkeyup="getName()">
-    <br/>
-    <br/>
-    <button type="button" onclick="login()">Ấn đăng ký</button>
-    <br/>
-    <br/>
-    <label for="calltoname">Tên người muốn gọi</label>
-    <input type="text" id="calltoname" onkeyup="getCalltoname()">
-    <br/>
-    <button type="button" onclick="createChanel()">GỌI</button> -->
 
     <script src="lib/js/firebase-app.js"></script>
     <script src="lib/js/firebase-database.js"></script>
