@@ -24,7 +24,7 @@ firebase.initializeApp(firebaseConfig);
 
 var database = firebase.database();
 
-const configuration = {iceServers: [{urls: ['stun:stun.l.google.com:19302',
+var iceServers = [{urls: ['stun:stun.l.google.com:19302',
 'stun:stun.l.google.com:19302',
 'stun:stun1.l.google.com:19302',
 'stun:stun2.l.google.com:19302',
@@ -44,8 +44,9 @@ const configuration = {iceServers: [{urls: ['stun:stun.l.google.com:19302',
   url: 'turn:turn.anyfirewall.com:443?transport=tcp',
   credential: 'webrtc',
   username: 'webrtc'
-}
-]};
+}];
+
+var configuration = {iceServers: iceServers};
 
 const remoteView = document.getElementById('remoteStream');
 const config = {audio: true, video: true};
@@ -436,3 +437,22 @@ navigator.mediaDevices.getUserMedia = navigator.mediaDevices.getUserMedia || nav
     showmsgchat[id].scrollTop(showmsgchat[id].prop('scrollHeight'));
   }
 
+$(document).ready(function () {
+  // window.onload = function() {
+    console.log("onload: ", configuration);
+    let xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function($evt){
+       if(xhr.readyState == 4 && xhr.status == 200){
+           let res = JSON.parse(xhr.responseText);
+           iceServers = res.v.iceServers;
+           configuration = iceServers;
+           console.log("response: ", iceServers);
+           console.log("onload: ", configuration);
+       }
+    };
+    xhr.open("PUT", "https://global.xirsys.net/_turn/MyFirstApp", true);
+    xhr.setRequestHeader ("Authorization", "Basic " + btoa("lehuyhoang999:09ae095a-26d2-11ea-827c-0242ac110004"));
+    xhr.setRequestHeader ("Content-Type", "application/json");
+    xhr.send( JSON.stringify({"format": "urls"}) );
+//  };
+});
