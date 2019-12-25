@@ -38,10 +38,14 @@ const configuration = {iceServers: [{urls: ['stun:stun.l.google.com:19302',
 'stun:stun.voiparound.com',
 'stun:stun.voipbuster.com',
 'stun:stun.voipstunt.com',
-'stun:stun.voxgratia.org',
-'turn:turn01.hubl.in?transport=udp',
-'turn:turn02.hubl.in?transport=tcp'
-]}]};
+'stun:stun.voxgratia.org'
+]},
+{
+  url: 'turn:turn.anyfirewall.com:443?transport=tcp',
+  credential: 'webrtc',
+  username: 'webrtc'
+}
+]};
 
 const remoteView = document.getElementById('remoteStream');
 const config = {audio: true, video: true};
